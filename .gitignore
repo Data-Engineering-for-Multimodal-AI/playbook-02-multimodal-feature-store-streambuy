@@ -1,0 +1,31 @@
+# Pretrained model weights (downloaded via download_models.py)
+models/resnet18.pth
+models/all-MiniLM-L6-v2/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+.venv_*/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large video files - upload manually to GitHub
+*.mp4
