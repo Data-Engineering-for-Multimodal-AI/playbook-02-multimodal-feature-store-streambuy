@@ -26,6 +26,3 @@ env/
 # OS
 .DS_Store
 Thumbs.db
-
-# Large video files - upload manually to GitHub
-*.mp4
