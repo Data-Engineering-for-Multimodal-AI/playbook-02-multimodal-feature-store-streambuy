@@ -27,7 +27,11 @@ class FeatureProcessor:
         self.milvus_client = milvus_client
         self.encoder_factory = EncoderFactory()
 
-        # Create vector collections — one per modality
+    def create_collections(self):
+        """Create vector collections — one per modality.
+
+        Needs a Milvus connection, so call it after milvus_client.connect().
+        """
         for modality, dim in self.DIMENSIONS.items():
             self.milvus_client.create_collection(modality, dim)
 

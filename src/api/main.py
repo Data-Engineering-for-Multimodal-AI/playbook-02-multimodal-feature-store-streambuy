@@ -30,6 +30,8 @@ async def lifespan(app: FastAPI):
     """Manage database connections across app lifecycle"""
     await pg_client.connect()
     milvus_client.connect()
+    # Collections can only be created once Milvus is connected
+    task_manager.processor.create_collections()
     yield
     await pg_client.close()
     milvus_client.disconnect()
