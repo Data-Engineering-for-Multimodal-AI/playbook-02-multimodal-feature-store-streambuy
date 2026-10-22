@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from .tasks import FeatureProcessor
 from ..db.postgres import PostgresClient
 from ..db.milvus import MilvusClient
@@ -29,10 +29,17 @@ class TaskManager:
         self.tasks[job_key] = task
         return {"status": "submitted", "job_id": job_key}
 
-    async def get_job_status(self, job_id: str) -> Dict[str, Any]:
-        """Get the status of a processing job"""
+    async def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """Get the status of a processing job (None if there is no such job)"""
         if job_id not in self.tasks:
-            return {"status": "error", "message": "Job not found"}
+            # Not run by this API process (e.g. the API restarted since):
+            # use the status stored in PostgreSQL
+            if not job_id.isdigit():
+                return None
+            row = await self.processor.pg_client.get_job(int(job_id))
+            if row is None:
+                return None
+            return {"status": row["status"], "job_id": row["id"]}
 
         task = self.tasks[job_id]
         if task.done():

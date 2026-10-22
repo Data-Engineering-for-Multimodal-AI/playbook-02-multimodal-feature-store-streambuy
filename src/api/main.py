@@ -83,9 +83,12 @@ async def create_product(product: Product,
 async def get_job_status(job_id: str):
     """Check the status of a feature processing job"""
     try:
-        return await task_manager.get_job_status(job_id)
+        status = await task_manager.get_job_status(job_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    if status is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return status
 
 
 @app.get("/products/{product_id}/features")
