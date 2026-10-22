@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
+from pydantic import BaseModel
 from ..models.pipeline import Product, ProcessingJob, Modality
 from ..db.postgres import PostgresClient
 from ..db.milvus import MilvusClient
@@ -100,15 +101,20 @@ async def get_product_features(product_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class SearchRequest(BaseModel):
+    """Body of a similarity search: {"query_vector": [...]}"""
+    query_vector: List[float]
+
+
 @app.post("/search/{modality}")
 async def search_similar(modality: Modality,
-                          query_vector: List[float],
+                          request: SearchRequest,
                           limit: int = 10):
     """Search for visually or semantically similar products"""
     try:
         import numpy as np
         results = milvus_client.search_similar(
-            modality, np.array(query_vector), limit
+            modality, np.array(request.query_vector), limit
         )
         return [
             {"product_id": pid, "distance": dist}
