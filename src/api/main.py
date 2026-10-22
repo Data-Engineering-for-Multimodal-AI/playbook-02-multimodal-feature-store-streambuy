@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,11 +12,16 @@ from ..worker.manager import TaskManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize clients
+# Initialize clients. Connection settings come from environment variables
+# (see .env.example); the defaults match docker-compose.yml.
 pg_client = PostgresClient(
-    "postgresql://user:password@localhost:5432/streambuy_features"
+    os.environ.get("DATABASE_URL",
+                   "postgresql://user:password@localhost:5432/streambuy_features")
 )
-milvus_client = MilvusClient()
+milvus_client = MilvusClient(
+    host=os.environ.get("MILVUS_HOST", "localhost"),
+    port=int(os.environ.get("MILVUS_PORT", "19530")),
+)
 task_manager = TaskManager(pg_client, milvus_client)
 
 
