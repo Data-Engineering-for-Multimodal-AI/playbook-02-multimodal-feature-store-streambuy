@@ -21,6 +21,10 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
+# Hide the per-file "HTTP Request: ..." lines and other INFO messages from the
+# download libraries, so the output matches the README
+for noisy in ("httpx", "httpx2", "huggingface_hub", "sentence_transformers"):
+    logging.getLogger(noisy).setLevel(logging.WARNING)
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 

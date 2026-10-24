@@ -1,0 +1,59 @@
+name: smoke
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    # Encoder playbook (Steps 3-5) on CPU, no Docker
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
+    steps:
+      - uses: actions/checkout@v7
+      # Only the one video the tests use, not all 842 MB of LFS videos
+      - name: Fetch the sample video from Git LFS
+        run: git lfs pull --include="sample_data/product_videos/white_sneakers.mp4"
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Cache models
+        uses: actions/cache@v6
+        with:
+          path: models
+          key: models-resnet18-all-MiniLM-L6-v2
+      - name: Smoke test
+        run: make smoke
+      - name: Printed install path (pip install -r requirements.txt)
+        run: |
+          uv venv --seed --python ${{ matrix.python-version }} /tmp/pipenv
+          /tmp/pipenv/bin/python -m pip install -q -r requirements.txt
+          /tmp/pipenv/bin/python test_pipeline.py
+
+  full-stack:
+    # Steps 6-7: Docker services, the API and the README's curl calls
+    runs-on: ubuntu-latest
+    env:
+      UV_PYTHON: "3.12"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Cache models
+        uses: actions/cache@v6
+        with:
+          path: models
+          key: models-resnet18-all-MiniLM-L6-v2
+      - name: Start services
+        run: docker compose up -d --wait
+      - name: API check
+        run: make api-check
+      - name: Service logs on failure
+        if: failure()
+        run: docker compose logs --tail=100
+      - name: Stop services
+        if: always()
+        run: docker compose down -v

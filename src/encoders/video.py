@@ -56,6 +56,13 @@ class VideoEncoder:
 
         if total_frames <= 0:
             cap.release()
+            # A clone without Git LFS has small text pointer files instead of videos
+            with open(video_path, "rb") as f:
+                if f.read(40).startswith(b"version https://git-lfs"):
+                    raise ValueError(
+                        f"{video_path} is a Git LFS pointer, not a video. "
+                        "Install Git LFS and run: git lfs pull --include=\"" + video_path + "\""
+                    )
             raise ValueError(f"Could not read video frames from {video_path}")
 
         frame_indices = np.linspace(

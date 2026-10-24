@@ -85,6 +85,15 @@ class PostgresClient:
             )
             self.logger.info(f"Saved result for job {result.job_id}")
 
+    async def get_job(self, job_id: int) -> Optional[dict]:
+        """Get a processing job row, or None if it doesn't exist"""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT id, product_id, status FROM processing_jobs WHERE id = $1",
+                job_id
+            )
+            return dict(row) if row else None
+
     async def get_product_results(self, product_id: int) -> List[dict]:
         """Get all processing results for a product"""
         async with self.pool.acquire() as conn:

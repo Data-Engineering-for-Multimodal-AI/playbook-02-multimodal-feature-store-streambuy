@@ -1,8 +1,10 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
+from pydantic import BaseModel
 from ..models.pipeline import Product, ProcessingJob, Modality
 from ..db.postgres import PostgresClient
 from ..db.milvus import MilvusClient
@@ -11,11 +13,16 @@ from ..worker.manager import TaskManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize clients
+# Initialize clients. Connection settings come from environment variables
+# (see .env.example); the defaults match docker-compose.yml.
 pg_client = PostgresClient(
-    "postgresql://user:password@localhost:5432/streambuy_features"
+    os.environ.get("DATABASE_URL",
+                   "postgresql://user:password@localhost:5432/streambuy_features")
 )
-milvus_client = MilvusClient()
+milvus_client = MilvusClient(
+    host=os.environ.get("MILVUS_HOST", "localhost"),
+    port=int(os.environ.get("MILVUS_PORT", "19530")),
+)
 task_manager = TaskManager(pg_client, milvus_client)
 
 
@@ -24,6 +31,8 @@ async def lifespan(app: FastAPI):
     """Manage database connections across app lifecycle"""
     await pg_client.connect()
     milvus_client.connect()
+    # Collections can only be created once Milvus is connected
+    task_manager.processor.create_collections()
     yield
     await pg_client.close()
     milvus_client.disconnect()
@@ -75,9 +84,12 @@ async def create_product(product: Product,
 async def get_job_status(job_id: str):
     """Check the status of a feature processing job"""
     try:
-        return await task_manager.get_job_status(job_id)
+        status = await task_manager.get_job_status(job_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    if status is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return status
 
 
 @app.get("/products/{product_id}/features")
@@ -89,15 +101,20 @@ async def get_product_features(product_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class SearchRequest(BaseModel):
+    """Body of a similarity search: {"query_vector": [...]}"""
+    query_vector: List[float]
+
+
 @app.post("/search/{modality}")
 async def search_similar(modality: Modality,
-                          query_vector: List[float],
+                          request: SearchRequest,
                           limit: int = 10):
     """Search for visually or semantically similar products"""
     try:
         import numpy as np
         results = milvus_client.search_similar(
-            modality, np.array(query_vector), limit
+            modality, np.array(request.query_vector), limit
         )
         return [
             {"product_id": pid, "distance": dist}

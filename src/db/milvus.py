@@ -38,9 +38,13 @@ class MilvusClient:
 
         collection_name = f"streambuy_{modality.value}_features"
 
-        # Drop if exists (for clean restarts during development)
+        # Reuse an existing collection, so restarting the API keeps the stored
+        # vectors (PostgreSQL keeps its rows too). To start from scratch, remove
+        # the Docker volumes: docker compose down -v
         if utility.has_collection(collection_name):
-            utility.drop_collection(collection_name)
+            self.collections[modality] = Collection(name=collection_name)
+            self.logger.info(f"Using existing collection: {collection_name}")
+            return
 
         fields = [
             FieldSchema(name="id", dtype=DataType.INT64,
