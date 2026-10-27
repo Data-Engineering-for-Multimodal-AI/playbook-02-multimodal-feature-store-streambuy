@@ -1,6 +1,6 @@
 # StreamBuy Multimodal Feature Store
 
-**Chapter 2 playbook** from *Data Engineering for Multimodal AI* (O'Reilly, 2026). Page numbers to be confirmed.
+**Chapter 2 playbook** from *Data Engineering for Multimodal AI* (O'Reilly, 2026), pages 60–68 (Early Release page numbers; they may differ in the final print).
 Book: https://oreil.ly/data-engineering-multimodal
 
 > Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
@@ -178,14 +178,16 @@ deactivate                      # exit the virtual environment
 
 ## Differences from the printed book
 
-| What | Printed version | Now | Why |
+The "First edition" column is the code and README at the `first-edition` tag, which the book describes.
+
+| What | First edition | Now | Why |
 |---|---|---|---|
-| Starting the API (Step 6) | `uvicorn` exited with `ConnectionNotExistException: should create connection first` | Starts | Collections were created before the Milvus connection; now after it |
-| Search request (Step 7) | `{"query_vector": [...]}` returned HTTP 422 | Works as printed | The endpoint expected a bare JSON array |
+| Starting the API (`uvicorn src.api.main:app --reload`, book page 66) | `uvicorn` exited with `ConnectionNotExistException: should create connection first` | Starts | Collections were created before the Milvus connection; now after it |
+| Search request | `{"query_vector": [...]}` (README) returned HTTP 422 | Works | The endpoint expected a bare JSON array |
 | API restart | Deleted all vectors; job status lost; unknown jobs returned HTTP 200 | Vectors and job status kept; unknown jobs return 404 | Collections were dropped on every start; job status was only in memory |
 | Docker images | Milvus v2.4.0, etcd v3.5.5, `minio/minio:RELEASE.2023-03-20` | Milvus v3.0.3, etcd v3.5.25, `milvusdb/minio:RELEASE.2024-12-18`, as in Milvus's own compose file | MinIO stopped publishing Docker images in October 2025; current Milvus |
 | Connection settings | Hard-coded | `DATABASE_URL`, `MILVUS_HOST`, `MILVUS_PORT`, `POSTGRES_PORT` (same defaults) | A local PostgreSQL on 5432 took the place of the Docker one |
-| Clone (Step 1) | `git clone <repo-url>` / `cd streambuy-featurestore`; no mention of Git LFS | Real URL and folder; Git LFS, with a light option | Without Git LFS the video test failed |
+| Clone | `git clone <repo-url>` / `cd streambuy-featurestore` (the book's tree, page 62, shows `streambuy-featurestore/`); no mention of Git LFS | Real URL and folder; Git LFS, with a light option | Without Git LFS the video test failed |
 | Install | Python 3.10+, unpinned; `pymilvus>=2.5.0` | Python 3.12+, pinned; `pymilvus<3.1` | pymilvus 3.1 removes the API this code uses |
 | Sample images | 20 files, including a portrait photo | 19 product photos | The portrait was unused and showed an identifiable person |
 | `download_models.py` output | | No `HTTP Request:` log lines | Matches the expected output |
@@ -206,7 +208,7 @@ Details and caveats are in [`sample_data/README.md`](sample_data/README.md). The
 
 ## Expected output
 
-From my run on 2026-10-22: macOS 26.5.1 (arm64), Python 3.12.15, a light clone from GitHub, `pip install -r requirements.txt` (88 s). Python 3.13.16 gave the same numbers.
+From my run on 2026-10-22: macOS 26.5.1 (arm64), Python 3.12.15, a light clone from GitHub, `pip install -r requirements.txt` (88 s). Python 3.13.16 gave the same numbers. This is the output of this version; it may differ from the output printed in the book, and that's okay.
 
 `python download_models.py` (84 s on the first run). On macOS, PyTorch also prints a `NOTE: Redirects are currently not supported in MacOs.` line, and Hugging Face may print a warning about unauthenticated requests; both are harmless.
 
@@ -320,7 +322,7 @@ A note for production use: the encoders run inside the API's event loop, so the 
 ```
 playbook-02-multimodal-feature-store-streambuy/
 ├── README.md                   # This file — playbook and architecture
-├── CHANGELOG.md                # Changes since the printed book
+├── CHANGELOG.md                # Changes since the first edition
 ├── requirements.txt            # Pinned dependencies (exported from uv.lock)
 ├── pyproject.toml, uv.lock     # Same dependencies for uv
 ├── download_models.py          # One-time model setup script
