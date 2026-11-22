@@ -3,7 +3,8 @@
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "moby": false
+      "moby": false,
+      "iptablesSwitchAtRuntime": false
     },
     "ghcr.io/devcontainers/features/git-lfs:1": {
       "autoPull": false
@@ -15,6 +16,7 @@
   },
   "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && pip install --no-cache-dir uv==0.13.0",
   "postCreateCommand": "make setup",
+  "postStartCommand": "docker info > /dev/null 2>&1 || (sudo update-alternatives --set iptables /usr/sbin/iptables-nft && sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-nft && /usr/local/share/docker-init.sh && docker info > /dev/null)",
   "forwardPorts": [
     8000
   ],
