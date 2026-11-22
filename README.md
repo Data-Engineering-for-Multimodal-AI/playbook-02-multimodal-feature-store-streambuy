@@ -1,7 +1,11 @@
-# StreamBuy Multimodal Feature Store
+# Playbook 02: Search products by photo, review and video
+**How to build a multimodal feature store with Milvus and PostgreSQL.** Chapter 2 of [*Data Engineering for Multimodal AI*](https://oreil.ly/data-engineering-multimodal) (O'Reilly, 2026), pages 61–69.
 
-**Chapter 2 playbook** from *Data Engineering for Multimodal AI* (O'Reilly, 2026), pages 61–69.
-Book: https://oreil.ly/data-engineering-multimodal
+An online store has photos, reviews and videos for every product, but a search that reads only one of them misses what the others show. In this repo, we explore this with StreamBuy, a fictional social commerce platform. Follow along to turn each kind of product data into vectors, store them in Milvus and PostgreSQL, and search them through an API you can feed your own products.
+
+**The problem.** Images, text and video each produce vectors of a different kind and size, and one system has to store all of them and search them quickly.
+
+**What you'll work with.** You'll encode each modality with its own model, normalize the vectors so they can be compared, keep vectors in Milvus and product details in PostgreSQL, and process new products in the background.
 
 > Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
 

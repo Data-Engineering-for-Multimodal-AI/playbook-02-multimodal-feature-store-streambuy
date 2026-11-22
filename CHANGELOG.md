@@ -17,6 +17,7 @@ Nothing the book shows has changed.
 - `make api-check` used a hard-coded `.venv/bin/python`. It now runs through `uv run`.
 
 ### Changed
+- README opening: a title that says what you'll do, three sentences on why, the example and what you'll do, then the data engineering problem and what you'll work with.
 - Book page numbers now match the printed book (they were Early Release page numbers).
 
 ## 2026.10.1 (2026-10-27)
