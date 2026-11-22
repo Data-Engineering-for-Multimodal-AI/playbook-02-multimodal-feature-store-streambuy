@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased (v1.1.0)
+
+Nothing the book shows has changed.
+
+### Added
+- `make load-samples` adds the 19 sample products through `POST /products/`, and `make search IMAGE=...` or
+  `make search TEXT=...` searches them by photo or by text (`scripts/`).
+- `make check-data DIR=...` and `make load DIR=...`: check a folder of your own products and add them.
+- Three measured experiments: `make try-modalities`, `make try-video-frames`, `make try-milvus-flush`
+  (`experiments/`).
+- README: time tiers, Try this, Use your own data, What you end up with, Before production, What it costs.
+- `make setup`, `make run`, `make serve` and `make clean`. `make run` encodes the sample image,
+  review and video on CPU (Steps 4-5); `make serve` starts the Docker services and the API
+  (Steps 6-7). `make smoke` and `make models` are unchanged.
+- `.devcontainer/` so the repo opens in GitHub Codespaces, with Docker-in-Docker for the services.
+  Git LFS files are not pulled automatically; `make run` fetches the one video it needs.
+- CI: a weekly scheduled run, a `make run` step, and a job that builds the devcontainer and runs
+  `make run` inside it.
+
+### Fixed
+- `make api-check` used a hard-coded `.venv/bin/python`. It now runs through `uv run`.
+
+### Changed
+- README: a numbered "Run it" section; the book's steps are under "Run it the way the book does".
+- README opening: a title that says what you'll do, three sentences on why, the example and what you'll do, then the data engineering problem and what you'll work with.
+- Book page numbers now match the printed book (they were Early Release page numbers).
+
 ## 2026.10.1 (2026-10-27)
 
 ### Changed

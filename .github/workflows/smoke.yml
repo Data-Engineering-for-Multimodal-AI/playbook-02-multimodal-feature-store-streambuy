@@ -4,6 +4,8 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly, Monday 06:00 UTC, so breakage in upstream packages shows up
 
 jobs:
   smoke:
@@ -28,6 +30,12 @@ jobs:
           key: models-resnet18-all-MiniLM-L6-v2
       - name: Smoke test
         run: make smoke
+      - name: One-command run
+        run: make run
+      - name: Use your own data (file checks)
+        run: uv run --frozen pytest -q tests/test_own_data.py
+      - name: Try this 1 and 2
+        run: make try-modalities && make try-video-frames
       - name: Printed install path (pip install -r requirements.txt)
         run: |
           uv venv --seed --python ${{ matrix.python-version }} /tmp/pipenv
@@ -51,9 +59,38 @@ jobs:
         run: docker compose up -d --wait
       - name: API check
         run: make api-check
+      # README "Run it", steps 3-5: make serve, make load-samples, make search
+      - name: Run it, steps 3-5
+        run: |
+          make serve > /tmp/serve.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf localhost:8000/openapi.json > /dev/null && break; sleep 2; done
+          make load-samples | tee /tmp/load.txt
+          grep -q "Added 19 products" /tmp/load.txt
+          make search IMAGE=sample_data/product_images/white_sneakers.jpg | tee /tmp/img.txt
+          grep -q "1. white sneakers .*distance 0.000" /tmp/img.txt
+          make search TEXT="great sound but the ear cushions get warm" | tee /tmp/txt.txt
+          grep -q "1. white overear headphones" /tmp/txt.txt
+          pkill -f "uvicorn src.api.main:app" || true
+      - name: Try this 3
+        run: make try-milvus-flush
+      - name: API log on failure
+        if: failure()
+        run: tail -50 /tmp/serve.log || true
       - name: Service logs on failure
         if: failure()
         run: docker compose logs --tail=100
       - name: Stop services
         if: always()
         run: docker compose down -v
+
+  devcontainer:
+    # Builds .devcontainer/ the way Codespaces does and runs the playbook inside it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the devcontainer and run the playbook
+        uses: devcontainers/ci@v0.3
+        with:
+          push: never
+          # make run, then the Docker services, to prove Docker-in-Docker works in Codespaces
+          runCmd: start=$(date +%s) && make run && echo "Time to first output in a clean devcontainer was $(( $(date +%s) - start )) s" && docker compose up -d --wait && make api-check && docker compose down -v

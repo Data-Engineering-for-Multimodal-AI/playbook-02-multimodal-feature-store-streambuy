@@ -1,4 +1,57 @@
-.PHONY: smoke models api-check
+.PHONY: setup run serve load-samples load check-data search try-modalities try-video-frames try-milvus-flush smoke models api-check clean
+
+# A bare `make` runs the smoke test, as it did before the uniform targets were added.
+.DEFAULT_GOAL := smoke
+
+# Uniform targets for The Playbooks. The book's commands (pip install -r requirements.txt,
+# python download_models.py, python test_pipeline.py, docker-compose up -d,
+# uvicorn src.api.main:app --reload) still work as printed.
+
+# Install the locked dependencies and download the two encoder models into models/.
+setup: models
+
+# Encode the sample image, review and video on CPU and print the vectors (Steps 4-5). No Docker.
+run: setup lfs-sample
+	uv run --frozen python test_pipeline.py
+
+# Start PostgreSQL and Milvus in Docker, then the API on http://localhost:8000 (Steps 6-7).
+serve: setup
+	docker compose up -d --wait
+	uv run --frozen uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+# With the API running (make serve): add the 19 sample products through POST /products/.
+load-samples:
+	uv run --frozen python scripts/load_products.py --samples
+
+# Your own products: images/, reviews/ and videos/ in DIR, one file per product,
+# named after the product. check-data checks every file and sends nothing.
+#   make check-data DIR=my_products
+#   make load DIR=my_products
+check-data:
+	@test -n "$(DIR)" || { echo "Usage: make check-data DIR=path/to/folder"; exit 2; }
+	uv run --frozen python scripts/load_products.py --dir "$(DIR)" --check-only
+
+load:
+	@test -n "$(DIR)" || { echo "Usage: make load DIR=path/to/folder"; exit 2; }
+	uv run --frozen python scripts/load_products.py --dir "$(DIR)"
+
+# With the API running: search by photo or by text.
+#   make search IMAGE=sample_data/product_images/white_sneakers.jpg
+#   make search TEXT="light and comfortable for long walks"
+search:
+	@if [ -n "$(IMAGE)" ]; then uv run --frozen python scripts/search.py --image "$(IMAGE)"; \
+	elif [ -n "$(TEXT)" ]; then uv run --frozen python scripts/search.py --text "$(TEXT)"; \
+	else echo 'Usage: make search IMAGE=path/to/photo.jpg  or  make search TEXT="a sentence"'; exit 2; fi
+
+# Try this: three measured experiments (see README, "Try this"). The third needs the Docker services.
+try-modalities: setup
+	uv run --frozen python experiments/modalities.py
+
+try-video-frames: setup lfs-sample
+	uv run --frozen python experiments/video_frames.py $(VIDEO)
+
+try-milvus-flush: setup
+	uv run --frozen python experiments/milvus_flush.py
 
 # Encoder playbook on CPU (Steps 4-5), no Docker. Downloads the models on first run.
 smoke: models
@@ -10,4 +63,16 @@ models:
 
 # Full stack (Steps 6-7). Start the services first: docker compose up -d --wait
 api-check: models
-	PYTHON=".venv/bin/python" bash tests/api_check.sh
+	uv run --frozen bash tests/api_check.sh
+
+# The one video `make run` encodes, if the clone skipped Git LFS files.
+.PHONY: lfs-sample
+lfs-sample:
+	@if head -c 100 sample_data/product_videos/white_sneakers.mp4 | grep -q git-lfs; then \
+		git lfs install --local && git lfs pull --include="sample_data/product_videos/white_sneakers.mp4"; fi
+
+# Stop the Docker services and delete their volumes, and remove test caches.
+# Downloaded models and the sample data are kept.
+clean:
+	-docker compose down -v --remove-orphans
+	rm -rf .pytest_cache

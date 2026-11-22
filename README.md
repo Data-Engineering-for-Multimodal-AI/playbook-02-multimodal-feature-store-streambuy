@@ -1,13 +1,224 @@
-# StreamBuy Multimodal Feature Store
+# Playbook 02: Search products by photo, review and video
+**How to build a multimodal feature store with Milvus and PostgreSQL.** Chapter 2 of [*Data Engineering for Multimodal AI*](https://oreil.ly/data-engineering-multimodal) (O'Reilly, 2026), pages 61–69.
 
-**Chapter 2 playbook** from *Data Engineering for Multimodal AI* (O'Reilly, 2026), pages 60–68 (Early Release page numbers; they may differ in the final print).
-Book: https://oreil.ly/data-engineering-multimodal
+An online store has photos, reviews and videos for every product, but a search that reads only one of them misses what the others show. In this repo, we explore this with StreamBuy, a fictional social commerce platform. Follow along to turn each kind of product data into vectors, store them in Milvus and PostgreSQL, and search them through an API you can feed your own products.
 
-> Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
+**The problem.** Images, text and video each produce vectors of a different kind and size, and one system has to store all of them and search them quickly.
 
-## What you'll build
+**What you'll work with.** You'll encode each modality with its own model, normalize the vectors so they can be compared, keep vectors in Milvus and product details in PostgreSQL, and process new products in the background.
 
-A multimodal feature store for the fictional StreamBuy e-commerce platform. It ingests product images, customer review text and product video clips, encodes each modality into dense vectors, stores them in PostgreSQL (metadata and results) and Milvus (vectors), and exposes a FastAPI service for similarity search.
+> Following the book? Its Steps 1–8 are in [Run it the way the book does](#run-it-the-way-the-book-does) and still work as printed. Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
+
+## Run it
+
+You need [uv](https://docs.astral.sh/uv/), [Git LFS](https://git-lfs.com), `make`, and Docker for steps 3 to 6. Or open the repo in a GitHub Codespace, where all of them are ready. On Windows without `make`, use a Codespace or the book's steps below.
+
+**1. Get the code.** This light clone is about 42 MB and fetches only the one video the tests use.
+
+```bash
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/Data-Engineering-for-Multimodal-AI/playbook-02-multimodal-feature-store-streambuy.git
+cd playbook-02-multimodal-feature-store-streambuy
+```
+
+**2. Encode the sample products.** Installs the locked dependencies, downloads the two encoder models (`python download_models.py`) and runs the five encoder tests (`python test_pipeline.py`). No Docker needed. On a fresh clone this took 1 min 51 s on a Mac, most of it the model download.
+
+```bash
+make run
+```
+
+You should see five `[PASS]` lines, then `ALL TESTS PASSED`:
+
+```
+[PASS] Image encoder: shape=(512,), norm=1.000000
+[PASS] Text encoder: shape=(384,), norm=1.000000
+[PASS] Video encoder: shape=(512,), norm=1.000000
+[PASS] Cross-modal similarity computed successfully
+[PASS] Batch encoding: 19 images encoded
+```
+
+Each photo, review and video is now a vector of length 1. Two photos of the same sneakers score 0.87 (1.0 means identical); sneakers and boots score 0.63.
+
+**3. Start the feature store.** Starts PostgreSQL and Milvus in Docker (`docker compose up -d --wait`), then the API on port 8000 (`uvicorn src.api.main:app`). Leave it running.
+
+```bash
+make serve
+```
+
+You should see `Application startup complete.` If another PostgreSQL already uses port 5432 on your machine, first run `export POSTGRES_PORT=5433 DATABASE_URL=postgresql://user:password@localhost:5433/streambuy_features` in this terminal and the next one.
+
+**4. Add the products.** In a second terminal. Sends each of the 19 sample products to `POST /products/` with its photo and reviews, the same request as the book's curl example. The API encodes them, stores the vectors in Milvus and the product details in PostgreSQL.
+
+```bash
+make load-samples
+```
+
+You should see one `success` line per product. This took 3 min 20 s on a Mac, because the API encodes one product at a time.
+
+```
+  success  blue yellow sneakers                 image + review
+  ...
+  success  white sneakers                       image + review
+```
+
+**5. Search.** By photo:
+
+```bash
+make search IMAGE=sample_data/product_images/white_sneakers.jpg
+```
+
+```
+Closest image matches for 'sample_data/product_images/white_sneakers.jpg':
+  1. white sneakers                       distance 0.000
+  2. powder blue sneakers                 distance 0.628
+  3. cream sneakers                       distance 0.635
+  4. blue yellow sneakers                 distance 0.719
+  5. light blue sneakers                  distance 0.728
+```
+
+Or by a sentence, matched against the reviews:
+
+```bash
+make search TEXT="great sound but the ear cushions get warm"
+```
+
+```
+Closest review matches for 'great sound but the ear cushions get warm':
+  1. white overear headphones             distance 1.098
+  2. powderblue overear headphones        distance 1.218
+  3. lilac earbuds                        distance 1.379
+  4. vibrant red sneakers                 distance 1.545
+  5. stylish faux leather sandals         distance 1.620
+```
+
+Smaller distance means more similar. The photo finds itself first, at 0, then other light-colored sneakers; the sentence finds the two headphones, then the earbuds. Try your own: `IMAGE=` takes any photo on your machine and `TEXT=` any sentence. To call the endpoints yourself, open http://localhost:8000/docs.
+
+**6. Clean up.** Stop the API with Ctrl+C, then:
+
+```bash
+make clean
+```
+
+This stops the services and deletes their data. The models and the sample data stay.
+
+To check the whole stack at once, start the services (`docker compose up -d --wait`) with the API stopped and run `make api-check`. It runs the book's curl calls, restarts the API and checks that nothing was lost.
+
+## How much time do you have?
+
+| Time | What to do |
+|---|---|
+| 15 minutes | [Run it](#run-it), steps 1 to 5. On a Mac, step 2 took 1 min 51 s and step 4 took 3 min 20 s. |
+| 1 hour | The three [Try this](#try-this) experiments, then search with your own photos and sentences. |
+| 1 day | [Use your own data](#use-your-own-data): load your own catalog, fix the two slow spots the experiments find, and work through [Before production](#before-production). |
+
+## Try this
+
+Each experiment changes one thing and measures the effect. The numbers below are from a Mac on 2026-11-21; yours will differ.
+
+**1. Which modality finds products of the same type?** Ranks every sample product's neighbors by photo, by review text, and by both together (the two vectors joined, 50/50), and counts how often the nearest ones are the same type (sneakers, sandals, headphones, water bottles). No Docker needed.
+
+```bash
+make try-modalities
+```
+
+```
+Search by                     nearest is same type  same type in top k
+photo only                                    87%                 74%
+review text only                              93%                 87%
+photo + reviews (50/50)                      100%                 92%
+```
+
+Combining the two modalities beats either one alone on this catalog. Change the weight in `fuse()` in `experiments/modalities.py` and run it again.
+
+**2. How many video frames does the video encoder need?** The encoder averages 8 frames. This encodes the same clip with 2 to 32 frames. No Docker needed.
+
+```bash
+make try-video-frames
+```
+
+```
+frames  encode time  similarity to 8 frames  similarity to the photo
+     2        0.20s                  0.9764                   0.6918
+     4        0.44s                  0.9818                   0.6959
+     8        1.05s                  1.0000                   0.7042
+    16        2.00s                  0.9948                   0.6988
+    32        3.85s                  0.9941                   0.7101
+```
+
+Time grows with the number of frames; the vector barely changes. Two frames give a vector 0.98 similar to the 8-frame one in a fifth of the time. Pass another clip with `VIDEO=`.
+
+**3. Why does adding products take minutes?** The worker calls Milvus `flush()` after every vector it inserts. This inserts 10 vectors into a scratch collection with a flush after each one, then with one flush at the end. Needs the services: `docker compose up -d --wait`.
+
+```bash
+make try-milvus-flush
+```
+
+```
+10 vectors inserted into Milvus (10 stored in the second run)
+  flush after every insert (as the worker does):  105.7 s  (10.57 s per vector)
+  one flush at the end:                             1.6 s
+```
+
+That flush is where most of step 4's 3 min 20 s goes. Changing `insert_features` in `src/db/milvus.py` is a good first fix.
+
+## Use your own data
+
+Put your products in a folder, one file per product and modality, named after the product:
+
+```
+my_products/
+  images/   red_runner.jpg  blue_tote.png      .jpg .jpeg .png .webp
+  reviews/  red_runner.txt  blue_tote.txt      .txt, UTF-8 (optional)
+  videos/   red_runner.mp4                     .mp4 .mov .avi .webm (optional)
+```
+
+Check it first. This reads every file and sends nothing:
+
+```bash
+make check-data DIR=my_products
+```
+
+It reports each file it can't use and why: a file type it doesn't take, an image that won't open or is smaller than 32x32, an empty review or one that isn't UTF-8, a video with no readable frames, or a Git LFS pointer instead of the file. When everything passes, load it with the API running (`make serve`) and search it:
+
+```bash
+make load DIR=my_products
+make search IMAGE=my_products/images/red_runner.jpg
+```
+
+Products already in the store (same name) are skipped, so you can add files and rerun. `make clean` empties the store.
+
+## What you end up with
+
+A running feature store with your products in it, searchable by photo or by text through an API, and three measurements of where its time and accuracy go.
+
+Skills you'll practice:
+- Encoding images, text and video into vectors with pretrained models
+- Normalizing vectors so different products can be compared
+- Storing vectors in Milvus and product records in PostgreSQL, and keeping them linked
+- Ingesting data through an API with background jobs
+- Validating input files before they reach the pipeline
+- Measuring a pipeline before changing it
+
+## Before production
+
+This playbook runs on one machine with sample data. Before you run something like it for real:
+
+1. **Encode outside the API.** The API encodes each product in its own process, one at a time, and answers nothing else while it does. Put the work on a queue with separate workers. *Chapter 2, "Containerization and Orchestration for Multimodal AI" (page 43); Chapter 9, "Batching and Inference Tiering" (page 344).*
+2. **Batch writes to the vector database.** A flush after every insert took 105.7 s for 10 vectors, against 1.6 s for one flush at the end ([Try this 3](#try-this)). *Chapter 2, "Production Patterns for Reliability and Scale" (page 51).*
+3. **Validate data where it enters.** `make check-data` checks files on your machine, but the API accepts any path it is sent. Check type, size and readability at the API too. *Chapter 4, "Validation, Transformation, Observability, and Annotation Across Modalities" (page 119).*
+4. **Record which model made each vector.** Store the model name and version with every vector, so a model change means a planned re-encode instead of a mix of old and new vectors. *Chapter 8, "Data Versioning and Experiment Tracking for Multimodal AI" (page 276).*
+5. **Choose the index by measuring it.** The collections use IVF_FLAT with `nlist=128` and `nprobe=10`, which is plenty for 19 products. At catalog scale, measure recall against latency before you pick an index and its settings. *Chapter 6, "Vector Databases" (page 180).*
+6. **Watch ingestion and search.** Track failed jobs, encode time, search latency and shifts in the vectors over time. *Chapter 2, "Monitoring and Observability" (page 53); Chapter 8, "Observability for Multimodal Systems" (page 287).*
+7. **Lock down the API.** It allows requests from any origin, has no authentication, and the Docker services use development passwords. *Chapter 11, "Protecting Data Across the Pipeline" (page 421).*
+8. **Know where your data came from.** The sample photos' per-file sources weren't recorded (see [Data and licenses](#data-and-licenses)). Record source and license for every file you ingest. *Chapter 11, "Lineage and Provenance Tracking" (page 416).*
+
+## What it costs
+
+| Where you run it | Cost |
+|---|---|
+| Your machine | $0. Everything runs locally: no API keys, no paid services. About 4 GB of disk. |
+| A GitHub Codespace (4 cores, 16 GB, the size this repo asks for) | Estimated $0.36 per hour at GitHub's list price (November 2026). A free personal account includes 120 core-hours a month, about 30 hours on this machine. In CI, building the container and running steps 2 to 4 took under 4 minutes. |
+
+## How it works
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌─────────────┐
@@ -32,9 +243,9 @@ A multimodal feature store for the fictional StreamBuy e-commerce platform. It i
 
 All encoders normalize output vectors to unit length, so a dot product is the cosine similarity.
 
-Steps 1–5 run the encoders on your laptop CPU with no other services. Steps 6–8 are optional and need Docker.
+## Run it the way the book does
 
-## Quick start
+These are the book's Steps 1–8 (pages 61–68), as printed apart from the fixes listed in [Differences from the printed book](#differences-from-the-printed-book). Steps 1–5 run the encoders on your laptop CPU with no other services. Steps 6–8 are optional and need Docker.
 
 You need Python 3.12 or newer, [Git LFS](https://git-lfs.com) (for the sample videos), and Docker only for Steps 6–8. Plan for about 4 GB of disk space.
 
@@ -166,6 +377,7 @@ deactivate                      # exit the virtual environment
 
 ### Checks
 
+- `make load-samples` and `make search`: see [Run it](#run-it), steps 4 and 5. `make check-data` and `make load`: see [Use your own data](#use-your-own-data).
 - `make smoke`: Steps 4–5 plus checks of the similarity claims below (about 1 minute after the first model download).
 - `make api-check`: Steps 6–7 with the services running. Runs the curl calls above, restarts the API and checks that the stored vectors and job status survive.
 
@@ -182,7 +394,7 @@ The "First edition" column is the code and README at the `first-edition` tag, wh
 
 | What | First edition | Now | Why |
 |---|---|---|---|
-| Starting the API (`uvicorn src.api.main:app --reload`, book page 66) | `uvicorn` exited with `ConnectionNotExistException: should create connection first` | Starts | Collections were created before the Milvus connection; now after it |
+| Starting the API (`uvicorn src.api.main:app --reload`, book page 67) | `uvicorn` exited with `ConnectionNotExistException: should create connection first` | Starts | Collections were created before the Milvus connection; now after it |
 | Search request | `{"query_vector": [...]}` (README) returned HTTP 422 | Works | The endpoint expected a bare JSON array |
 | API restart | Deleted all vectors; job status lost; unknown jobs returned HTTP 200 | Vectors and job status kept; unknown jobs return 404 | Collections were dropped on every start; job status was only in memory |
 | Docker images | Milvus v2.4.0, etcd v3.5.5, `minio/minio:RELEASE.2023-03-20` | Milvus v3.0.3, etcd v3.5.25, `milvusdb/minio:RELEASE.2024-12-18`, as in Milvus's own compose file | MinIO stopped publishing Docker images in October 2025; current Milvus |
@@ -330,7 +542,11 @@ playbook-02-multimodal-feature-store-streambuy/
 ├── docker-compose.yml          # PostgreSQL + Milvus infrastructure
 ├── schema.sql                  # Database schema
 ├── .env.example                # Connection settings (environment variables)
-├── Makefile                    # make smoke, make api-check
+├── Makefile                    # make run, serve, load-samples, search, try-*, check-data, load, clean
+├── scripts/
+│   ├── load_products.py        # make load-samples, check-data, load: check files and add products
+│   └── search.py               # make search: search by photo or by text
+├── experiments/                # make try-*: the three Try this experiments
 ├── models/                     # Pretrained weights (created by download_models.py)
 ├── src/
 │   ├── api/main.py             # FastAPI endpoints
@@ -348,6 +564,7 @@ playbook-02-multimodal-feature-store-streambuy/
 │       └── manager.py          # Async task manager
 ├── tests/
 │   ├── test_smoke.py           # make smoke
+│   ├── test_own_data.py        # checks for make check-data and make load
 │   └── api_check.sh            # make api-check (full stack)
 └── sample_data/
     ├── README.md               # Sources, licenses and notes
@@ -367,6 +584,8 @@ playbook-02-multimodal-feature-store-streambuy/
 | `role "user" does not exist` | Another PostgreSQL is using port 5432; see the note in Step 6 |
 | `docker-compose up` fails | Make sure Docker is running and ports 5432, 19530, 9000 and 9001 are free |
 | `Connection refused` on API calls | Wait until all Docker services are healthy before starting uvicorn |
+
+If this playbook helped you, a star helps other readers find it.
 
 ## License
 
