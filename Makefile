@@ -1,5 +1,8 @@
 .PHONY: setup run serve smoke models api-check clean
 
+# A bare `make` runs the smoke test, as it did before the uniform targets were added.
+.DEFAULT_GOAL := smoke
+
 # Uniform targets for The Playbooks. The book's commands (pip install -r requirements.txt,
 # python download_models.py, python test_pipeline.py, docker-compose up -d,
 # uvicorn src.api.main:app --reload) still work as printed.
