@@ -2,7 +2,7 @@
   "name": "Playbook 02: multimodal feature store",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": { "moby": false },
     "ghcr.io/devcontainers/features/git-lfs:1": { "autoPull": false }
   },
   "hostRequirements": { "cpus": 4, "memory": "16gb" },
