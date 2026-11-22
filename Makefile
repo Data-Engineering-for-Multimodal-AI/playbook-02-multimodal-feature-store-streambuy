@@ -1,4 +1,4 @@
-.PHONY: setup run serve load-samples search smoke models api-check clean
+.PHONY: setup run serve load-samples load check-data search try-modalities try-video-frames try-milvus-flush smoke models api-check clean
 
 # A bare `make` runs the smoke test, as it did before the uniform targets were added.
 .DEFAULT_GOAL := smoke
@@ -21,7 +21,19 @@ serve: setup
 
 # With the API running (make serve): add the 19 sample products through POST /products/.
 load-samples:
-	uv run --frozen python scripts/load_samples.py
+	uv run --frozen python scripts/load_products.py --samples
+
+# Your own products: images/, reviews/ and videos/ in DIR, one file per product,
+# named after the product. check-data checks every file and sends nothing.
+#   make check-data DIR=my_products
+#   make load DIR=my_products
+check-data:
+	@test -n "$(DIR)" || { echo "Usage: make check-data DIR=path/to/folder"; exit 2; }
+	uv run --frozen python scripts/load_products.py --dir "$(DIR)" --check-only
+
+load:
+	@test -n "$(DIR)" || { echo "Usage: make load DIR=path/to/folder"; exit 2; }
+	uv run --frozen python scripts/load_products.py --dir "$(DIR)"
 
 # With the API running: search by photo or by text.
 #   make search IMAGE=sample_data/product_images/white_sneakers.jpg
@@ -30,6 +42,16 @@ search:
 	@if [ -n "$(IMAGE)" ]; then uv run --frozen python scripts/search.py --image "$(IMAGE)"; \
 	elif [ -n "$(TEXT)" ]; then uv run --frozen python scripts/search.py --text "$(TEXT)"; \
 	else echo 'Usage: make search IMAGE=path/to/photo.jpg  or  make search TEXT="a sentence"'; exit 2; fi
+
+# Try this: three measured experiments (see README, "Try this"). The third needs the Docker services.
+try-modalities: setup
+	uv run --frozen python experiments/modalities.py
+
+try-video-frames: setup lfs-sample
+	uv run --frozen python experiments/video_frames.py $(VIDEO)
+
+try-milvus-flush: setup
+	uv run --frozen python experiments/milvus_flush.py
 
 # Encoder playbook on CPU (Steps 4-5), no Docker. Downloads the models on first run.
 smoke: models

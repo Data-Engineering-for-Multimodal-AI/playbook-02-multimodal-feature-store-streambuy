@@ -7,6 +7,10 @@ Nothing the book shows has changed.
 ### Added
 - `make load-samples` adds the 19 sample products through `POST /products/`, and `make search IMAGE=...` or
   `make search TEXT=...` searches them by photo or by text (`scripts/`).
+- `make check-data DIR=...` and `make load DIR=...`: check a folder of your own products and add them.
+- Three measured experiments: `make try-modalities`, `make try-video-frames`, `make try-milvus-flush`
+  (`experiments/`).
+- README: time tiers, Try this, Use your own data, What you end up with, Before production, What it costs.
 - `make setup`, `make run`, `make serve` and `make clean`. `make run` encodes the sample image,
   review and video on CPU (Steps 4-5); `make serve` starts the Docker services and the API
   (Steps 6-7). `make smoke` and `make models` are unchanged.

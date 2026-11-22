@@ -32,6 +32,10 @@ jobs:
         run: make smoke
       - name: One-command run
         run: make run
+      - name: Use your own data (file checks)
+        run: uv run --frozen pytest -q tests/test_own_data.py
+      - name: Try this 1 and 2
+        run: make try-modalities && make try-video-frames
       - name: Printed install path (pip install -r requirements.txt)
         run: |
           uv venv --seed --python ${{ matrix.python-version }} /tmp/pipenv
@@ -67,6 +71,8 @@ jobs:
           make search TEXT="great sound but the ear cushions get warm" | tee /tmp/txt.txt
           grep -q "1. white overear headphones" /tmp/txt.txt
           pkill -f "uvicorn src.api.main:app" || true
+      - name: Try this 3
+        run: make try-milvus-flush
       - name: API log on failure
         if: failure()
         run: tail -50 /tmp/serve.log || true
@@ -87,4 +93,4 @@ jobs:
         with:
           push: never
           # make run, then the Docker services, to prove Docker-in-Docker works in Codespaces
-          runCmd: make run && docker compose up -d --wait && make api-check && docker compose down -v
+          runCmd: start=$(date +%s) && make run && echo "Time to first output in a clean devcontainer: $(( $(date +%s) - start )) s" && docker compose up -d --wait && make api-check && docker compose down -v
