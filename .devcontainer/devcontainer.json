@@ -2,18 +2,37 @@
   "name": "Playbook 02: multimodal feature store",
   "image": "mcr.microsoft.com/devcontainers/python:3.12",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": { "moby": false },
-    "ghcr.io/devcontainers/features/git-lfs:1": { "autoPull": false }
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/git-lfs:1": {
+      "autoPull": false
+    }
   },
-  "hostRequirements": { "cpus": 4, "memory": "16gb" },
-  "onCreateCommand": "pip install --no-cache-dir uv==0.13.0",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "16gb"
+  },
+  "onCreateCommand": "sudo apt-get update && sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0 && pip install --no-cache-dir uv==0.13.0",
   "postCreateCommand": "make setup",
-  "forwardPorts": [8000],
+  "forwardPorts": [
+    8000
+  ],
   "portsAttributes": {
-    "8000": { "label": "Feature store API" }
+    "8000": {
+      "label": "Feature store API"
+    }
   },
   "customizations": {
-    "codespaces": { "openFiles": ["README.md"] },
-    "vscode": { "extensions": ["ms-python.python"] }
+    "codespaces": {
+      "openFiles": [
+        "README.md"
+      ]
+    },
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
   }
 }

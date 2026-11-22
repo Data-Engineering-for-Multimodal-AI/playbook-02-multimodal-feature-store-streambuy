@@ -32,7 +32,7 @@ api-check: models
 .PHONY: lfs-sample
 lfs-sample:
 	@if head -c 100 sample_data/product_videos/white_sneakers.mp4 | grep -q git-lfs; then \
-		git lfs pull --include="sample_data/product_videos/white_sneakers.mp4"; fi
+		git lfs install --local && git lfs pull --include="sample_data/product_videos/white_sneakers.mp4"; fi
 
 # Stop the Docker services and delete their volumes, and remove test caches.
 # Downloaded models and the sample data are kept.
