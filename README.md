@@ -585,6 +585,8 @@ playbook-02-multimodal-feature-store-streambuy/
 | `docker-compose up` fails | Make sure Docker is running and ports 5432, 19530, 9000 and 9001 are free |
 | `Connection refused` on API calls | Wait until all Docker services are healthy before starting uvicorn |
 
+If this playbook helped you, a star helps other readers find it.
+
 ## License
 
 MIT. See [LICENSE](LICENSE). Copyright (c) 2025-2026 Data Engineering for Multimodal AI. The sample images and videos are under their own licenses; see [Data and licenses](#data-and-licenses).
