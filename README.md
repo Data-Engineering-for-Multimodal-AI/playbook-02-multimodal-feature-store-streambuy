@@ -7,11 +7,102 @@ An online store has photos, reviews and videos for every product, but a search t
 
 **What you'll work with.** You'll encode each modality with its own model, normalize the vectors so they can be compared, keep vectors in Milvus and product details in PostgreSQL, and process new products in the background.
 
-> Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
+> Following the book? Its Steps 1–8 are in [Run it the way the book does](#run-it-the-way-the-book-does) and still work as printed. Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
 
-## What you'll build
+## Run it
 
-A multimodal feature store for the fictional StreamBuy e-commerce platform. It ingests product images, customer review text and product video clips, encodes each modality into dense vectors, stores them in PostgreSQL (metadata and results) and Milvus (vectors), and exposes a FastAPI service for similarity search.
+You need [uv](https://docs.astral.sh/uv/), [Git LFS](https://git-lfs.com), `make`, and Docker for steps 3 to 6. Or open the repo in a GitHub Codespace, where all of them are ready. On Windows without `make`, use a Codespace or the book's steps below.
+
+**1. Get the code.** This light clone is about 42 MB and fetches only the one video the tests use.
+
+```bash
+GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/Data-Engineering-for-Multimodal-AI/playbook-02-multimodal-feature-store-streambuy.git
+cd playbook-02-multimodal-feature-store-streambuy
+```
+
+**2. Encode the sample products.** Installs the locked dependencies, downloads the two encoder models (`python download_models.py`) and runs the five encoder tests (`python test_pipeline.py`). No Docker needed. On a fresh clone this took 1 min 51 s on a Mac, most of it the model download.
+
+```bash
+make run
+```
+
+You should see five `[PASS]` lines, then `ALL TESTS PASSED`:
+
+```
+[PASS] Image encoder: shape=(512,), norm=1.000000
+[PASS] Text encoder: shape=(384,), norm=1.000000
+[PASS] Video encoder: shape=(512,), norm=1.000000
+[PASS] Cross-modal similarity computed successfully
+[PASS] Batch encoding: 19 images encoded
+```
+
+Each photo, review and video is now a vector of length 1. Two photos of the same sneakers score 0.87 (1.0 means identical); sneakers and boots score 0.63.
+
+**3. Start the feature store.** Starts PostgreSQL and Milvus in Docker (`docker compose up -d --wait`), then the API on port 8000 (`uvicorn src.api.main:app`). Leave it running.
+
+```bash
+make serve
+```
+
+You should see `Application startup complete.` If another PostgreSQL already uses port 5432 on your machine, first run `export POSTGRES_PORT=5433 DATABASE_URL=postgresql://user:password@localhost:5433/streambuy_features` in this terminal and the next one.
+
+**4. Add the products.** In a second terminal. Sends each of the 19 sample products to `POST /products/` with its photo and reviews, the same request as the book's curl example. The API encodes them, stores the vectors in Milvus and the product details in PostgreSQL.
+
+```bash
+make load-samples
+```
+
+You should see one `success` line per product. This took 3 min 20 s on a Mac, because the API encodes one product at a time.
+
+```
+  success  blue yellow sneakers                 image + review
+  ...
+  success  white sneakers                       image + review
+```
+
+**5. Search.** By photo:
+
+```bash
+make search IMAGE=sample_data/product_images/white_sneakers.jpg
+```
+
+```
+Closest image matches for 'sample_data/product_images/white_sneakers.jpg':
+  1. white sneakers                       distance 0.000
+  2. powder blue sneakers                 distance 0.628
+  3. cream sneakers                       distance 0.635
+  4. blue yellow sneakers                 distance 0.719
+  5. light blue sneakers                  distance 0.728
+```
+
+Or by a sentence, matched against the reviews:
+
+```bash
+make search TEXT="great sound but the ear cushions get warm"
+```
+
+```
+Closest review matches for 'great sound but the ear cushions get warm':
+  1. white overear headphones             distance 1.098
+  2. powderblue overear headphones        distance 1.218
+  3. lilac earbuds                        distance 1.379
+  4. vibrant red sneakers                 distance 1.545
+  5. stylish faux leather sandals         distance 1.620
+```
+
+Smaller distance means more similar. The photo finds itself first, at 0, then other light-colored sneakers; the sentence finds the two headphones, then the earbuds. Try your own: `IMAGE=` takes any photo on your machine and `TEXT=` any sentence. To call the endpoints yourself, open http://localhost:8000/docs.
+
+**6. Clean up.** Stop the API with Ctrl+C, then:
+
+```bash
+make clean
+```
+
+This stops the services and deletes their data. The models and the sample data stay.
+
+To check the whole stack at once, start the services (`docker compose up -d --wait`) with the API stopped and run `make api-check`. It runs the book's curl calls, restarts the API and checks that nothing was lost.
+
+## How it works
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌─────────────┐
@@ -36,9 +127,9 @@ A multimodal feature store for the fictional StreamBuy e-commerce platform. It i
 
 All encoders normalize output vectors to unit length, so a dot product is the cosine similarity.
 
-Steps 1–5 run the encoders on your laptop CPU with no other services. Steps 6–8 are optional and need Docker.
+## Run it the way the book does
 
-## Quick start
+These are the book's Steps 1–8 (pages 61–68), as printed apart from the fixes listed in [Differences from the printed book](#differences-from-the-printed-book). Steps 1–5 run the encoders on your laptop CPU with no other services. Steps 6–8 are optional and need Docker.
 
 You need Python 3.12 or newer, [Git LFS](https://git-lfs.com) (for the sample videos), and Docker only for Steps 6–8. Plan for about 4 GB of disk space.
 
@@ -170,6 +261,7 @@ deactivate                      # exit the virtual environment
 
 ### Checks
 
+- `make load-samples` and `make search`: see [Run it](#run-it), steps 4 and 5.
 - `make smoke`: Steps 4–5 plus checks of the similarity claims below (about 1 minute after the first model download).
 - `make api-check`: Steps 6–7 with the services running. Runs the curl calls above, restarts the API and checks that the stored vectors and job status survive.
 
@@ -334,7 +426,10 @@ playbook-02-multimodal-feature-store-streambuy/
 ├── docker-compose.yml          # PostgreSQL + Milvus infrastructure
 ├── schema.sql                  # Database schema
 ├── .env.example                # Connection settings (environment variables)
-├── Makefile                    # make smoke, make api-check
+├── Makefile                    # make run, serve, load-samples, search, clean, smoke, api-check
+├── scripts/
+│   ├── load_samples.py         # make load-samples: add the 19 sample products through the API
+│   └── search.py               # make search: search by photo or by text
 ├── models/                     # Pretrained weights (created by download_models.py)
 ├── src/
 │   ├── api/main.py             # FastAPI endpoints

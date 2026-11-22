@@ -55,6 +55,21 @@ jobs:
         run: docker compose up -d --wait
       - name: API check
         run: make api-check
+      # README "Run it", steps 3-5: make serve, make load-samples, make search
+      - name: Run it, steps 3-5
+        run: |
+          make serve > /tmp/serve.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf localhost:8000/openapi.json > /dev/null && break; sleep 2; done
+          make load-samples | tee /tmp/load.txt
+          grep -q "Added 19 products" /tmp/load.txt
+          make search IMAGE=sample_data/product_images/white_sneakers.jpg | tee /tmp/img.txt
+          grep -q "1. white sneakers .*distance 0.000" /tmp/img.txt
+          make search TEXT="great sound but the ear cushions get warm" | tee /tmp/txt.txt
+          grep -q "1. white overear headphones" /tmp/txt.txt
+          pkill -f "uvicorn src.api.main:app" || true
+      - name: API log on failure
+        if: failure()
+        run: tail -50 /tmp/serve.log || true
       - name: Service logs on failure
         if: failure()
         run: docker compose logs --tail=100

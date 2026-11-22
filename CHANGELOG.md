@@ -5,6 +5,8 @@
 Nothing the book shows has changed.
 
 ### Added
+- `make load-samples` adds the 19 sample products through `POST /products/`, and `make search IMAGE=...` or
+  `make search TEXT=...` searches them by photo or by text (`scripts/`).
 - `make setup`, `make run`, `make serve` and `make clean`. `make run` encodes the sample image,
   review and video on CPU (Steps 4-5); `make serve` starts the Docker services and the API
   (Steps 6-7). `make smoke` and `make models` are unchanged.
@@ -17,6 +19,7 @@ Nothing the book shows has changed.
 - `make api-check` used a hard-coded `.venv/bin/python`. It now runs through `uv run`.
 
 ### Changed
+- README: a numbered "Run it" section; the book's steps are under "Run it the way the book does".
 - README opening: a title that says what you'll do, three sentences on why, the example and what you'll do, then the data engineering problem and what you'll work with.
 - Book page numbers now match the printed book (they were Early Release page numbers).
 

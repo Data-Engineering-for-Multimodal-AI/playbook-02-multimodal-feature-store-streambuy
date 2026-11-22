@@ -1,4 +1,4 @@
-.PHONY: setup run serve smoke models api-check clean
+.PHONY: setup run serve load-samples search smoke models api-check clean
 
 # A bare `make` runs the smoke test, as it did before the uniform targets were added.
 .DEFAULT_GOAL := smoke
@@ -18,6 +18,18 @@ run: setup lfs-sample
 serve: setup
 	docker compose up -d --wait
 	uv run --frozen uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+# With the API running (make serve): add the 19 sample products through POST /products/.
+load-samples:
+	uv run --frozen python scripts/load_samples.py
+
+# With the API running: search by photo or by text.
+#   make search IMAGE=sample_data/product_images/white_sneakers.jpg
+#   make search TEXT="light and comfortable for long walks"
+search:
+	@if [ -n "$(IMAGE)" ]; then uv run --frozen python scripts/search.py --image "$(IMAGE)"; \
+	elif [ -n "$(TEXT)" ]; then uv run --frozen python scripts/search.py --text "$(TEXT)"; \
+	else echo 'Usage: make search IMAGE=path/to/photo.jpg  or  make search TEXT="a sentence"'; exit 2; fi
 
 # Encoder playbook on CPU (Steps 4-5), no Docker. Downloads the models on first run.
 smoke: models
