@@ -93,4 +93,4 @@ jobs:
         with:
           push: never
           # make run, then the Docker services, to prove Docker-in-Docker works in Codespaces
-          runCmd: start=$(date +%s) && make run && echo "Time to first output in a clean devcontainer: $(( $(date +%s) - start )) s" && docker compose up -d --wait && make api-check && docker compose down -v
+          runCmd: start=$(date +%s) && make run && echo "Time to first output in a clean devcontainer was $(( $(date +%s) - start )) s" && docker compose up -d --wait && make api-check && docker compose down -v
