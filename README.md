@@ -1,6 +1,6 @@
 # StreamBuy Multimodal Feature Store
 
-**Chapter 2 playbook** from *Data Engineering for Multimodal AI* (O'Reilly, 2026), pages 60–68 (Early Release page numbers; they may differ in the final print).
+**Chapter 2 playbook** from *Data Engineering for Multimodal AI* (O'Reilly, 2026), pages 61–69.
 Book: https://oreil.ly/data-engineering-multimodal
 
 > Want the code exactly as printed? Use the `first-edition` tag. This branch is the 2026 maintenance update; see [Differences from the printed book](#differences-from-the-printed-book).
@@ -182,7 +182,7 @@ The "First edition" column is the code and README at the `first-edition` tag, wh
 
 | What | First edition | Now | Why |
 |---|---|---|---|
-| Starting the API (`uvicorn src.api.main:app --reload`, book page 66) | `uvicorn` exited with `ConnectionNotExistException: should create connection first` | Starts | Collections were created before the Milvus connection; now after it |
+| Starting the API (`uvicorn src.api.main:app --reload`, book page 67) | `uvicorn` exited with `ConnectionNotExistException: should create connection first` | Starts | Collections were created before the Milvus connection; now after it |
 | Search request | `{"query_vector": [...]}` (README) returned HTTP 422 | Works | The endpoint expected a bare JSON array |
 | API restart | Deleted all vectors; job status lost; unknown jobs returned HTTP 200 | Vectors and job status kept; unknown jobs return 404 | Collections were dropped on every start; job status was only in memory |
 | Docker images | Milvus v2.4.0, etcd v3.5.5, `minio/minio:RELEASE.2023-03-20` | Milvus v3.0.3, etcd v3.5.25, `milvusdb/minio:RELEASE.2024-12-18`, as in Milvus's own compose file | MinIO stopped publishing Docker images in October 2025; current Milvus |
