@@ -1,0 +1,19 @@
+{
+  "name": "Playbook 02: multimodal feature store",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/git-lfs:1": { "autoPull": false }
+  },
+  "hostRequirements": { "cpus": 4, "memory": "16gb" },
+  "onCreateCommand": "pip install --no-cache-dir uv==0.13.0",
+  "postCreateCommand": "make setup",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": { "label": "Feature store API" }
+  },
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] },
+    "vscode": { "extensions": ["ms-python.python"] }
+  }
+}
