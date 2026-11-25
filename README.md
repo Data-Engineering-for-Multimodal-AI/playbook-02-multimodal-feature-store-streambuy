@@ -1,5 +1,15 @@
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/img/header-dark.png">
+  <img src="docs/img/header-light.png" alt="Playbook 02 of 12, Chapter 2 of Data Engineering for Multimodal AI. Build: a multimodal feature store. Data: photos, reviews and video." width="100%">
+</picture>
+
 # Playbook 02: Search products by photo, review and video
 **How to build a multimodal feature store with Milvus and PostgreSQL.** Chapter 2 of [*Data Engineering for Multimodal AI*](https://oreil.ly/data-engineering-multimodal) (O'Reilly, 2026), pages 61–69.
+
+[![Tests](https://github.com/Data-Engineering-for-Multimodal-AI/playbook-02-multimodal-feature-store-streambuy/actions/workflows/smoke.yml/badge.svg?branch=main)](https://github.com/Data-Engineering-for-Multimodal-AI/playbook-02-multimodal-feature-store-streambuy/actions/workflows/smoke.yml)
+![Python 3.12 | 3.13](https://img.shields.io/badge/python-3.12%20%7C%203.13-1f1a19?labelColor=6b6361)
+[![License: MIT](https://img.shields.io/badge/license-MIT-1f1a19?labelColor=6b6361)](LICENSE)
+[![Open in GitHub Codespaces](https://img.shields.io/badge/Open%20in-Codespaces-b4422e?logo=github&labelColor=6b6361)](https://codespaces.new/Data-Engineering-for-Multimodal-AI/playbook-02-multimodal-feature-store-streambuy?quickstart=1)
 
 An online store has photos, reviews and videos for every product, but a search that reads only one of them misses what the others show. In this repo, we explore this with StreamBuy, a fictional social commerce platform. Follow along to turn each kind of product data into vectors, store them in Milvus and PostgreSQL, and search them through an API you can feed your own products.
 
@@ -220,6 +230,18 @@ This playbook runs on one machine with sample data. Before you run something lik
 
 ## How it works
 
+```mermaid
+flowchart LR
+  A["Product data<br/>photos, reviews, videos"] --> B["FastAPI<br/>POST /products/"]
+  B --> C["Background job<br/>one per product"]
+  C --> D["Encoders<br/>ResNet18 and MiniLM-L6"]
+  D --> E["Milvus<br/>one collection per modality"]
+  C --> F["PostgreSQL<br/>products, jobs, results"]
+  E --> G["Similarity search<br/>POST /search/modality"]
+  classDef key fill:#ffe8e3,stroke:#b4422e,color:#1f1a19
+  class E key
+```
+
 ```
 ┌──────────────┐     ┌──────────────┐     ┌─────────────┐
 │ Product Data │────▶│   Encoders   │────▶│   Storage   │
@@ -418,7 +440,7 @@ The full list is in [CHANGELOG.md](CHANGELOG.md).
 
 Details and caveats are in [`sample_data/README.md`](sample_data/README.md). The products differ across modalities on purpose: a "white sneakers" image and video may show different shoes.
 
-The full list, with sources, licenses and citations, is in [DATA_LICENSES.md](DATA_LICENSES.md).
+The full list, with sources, licenses and citations, is in [DATA_SOURCES.md](DATA_SOURCES.md).
 
 ## Expected output
 
@@ -592,3 +614,8 @@ If this playbook helped you, a star helps other readers find it.
 ## License
 
 MIT. See [LICENSE](LICENSE). Copyright (c) 2025-2026 Data Engineering for Multimodal AI. The sample images and videos are under their own licenses; see [Data and licenses](#data-and-licenses).
+
+---
+
+[The book](https://oreil.ly/data-engineering-multimodal) · [All playbooks](https://github.com/Data-Engineering-for-Multimodal-AI#playbooks) · Previous: [Playbook 01](https://github.com/Data-Engineering-for-Multimodal-AI/playbook-01-multimodal-ai-semantic-layer) · Next: [Playbook 03](https://github.com/Data-Engineering-for-Multimodal-AI/playbook-03-multimodal-context-platform)
+<!-- Substack post for this playbook: add link here -->
