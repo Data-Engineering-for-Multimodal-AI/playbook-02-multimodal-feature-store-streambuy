@@ -13,6 +13,7 @@ setup: models
 # Encode the sample image, review and video on CPU and print the vectors (Steps 4-5). No Docker.
 run: setup lfs-sample
 	uv run --frozen python test_pipeline.py
+	@echo "playbook-02-multimodal-feature-store-streambuy" > .playbook-done
 
 # Start PostgreSQL and Milvus in Docker, then the API on http://localhost:8000 (Steps 6-7).
 serve: setup
